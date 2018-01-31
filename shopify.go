@@ -18,6 +18,14 @@ type Auth struct {
 	Secret string
 }
 
+type Error struct {
+	Errors string `json:"errors,omitempty"`
+}
+
+func (e *Error) Error() string {
+	return e.Errors
+}
+
 type Product struct {
 	Title string `json:"title,omitempty"`
 }
@@ -58,8 +66,10 @@ func (s *Store) post(resource string, in interface{}) error {
 	if err != nil {
 		return err
 	}
+	if err = getError(body); err != nil {
+		return err
+	}
 	err = json.Unmarshal(body, in)
-	fmt.Println("body", string(body))
 	if err != nil {
 		return err
 	}
@@ -68,6 +78,17 @@ func (s *Store) post(resource string, in interface{}) error {
 
 func (s *Store) url() string {
 	return fmt.Sprintf("https://%s.myshopify.com", s.Name)
+}
+
+func getError(body []byte) error {
+	e := &Error{}
+	if err := json.Unmarshal(body, e); err != nil {
+		return err
+	}
+	if e.Errors != "" {
+		return e
+	}
+	return nil
 }
 
 func structName(in interface{}) string {
