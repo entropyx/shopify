@@ -9,9 +9,15 @@ import (
 func Test(t *testing.T) {
 
 	Convey("Given a product", t, func() {
-		product := &Product{}
+		product := &Product{
+			Title:       "test product",
+			BodyHTML:    "test body",
+			Vendor:      "Nike",
+			ProductType: "test product type",
+			Tags:        `Barnes & Noble, John's Fav, "Big Air"`,
+		}
 		auth := Authenticate()
-		store := auth.NewStore("ropa-chida")
+		store := auth.NewStore("linduritas")
 		err := store.Create(product)
 		So(err, ShouldBeNil)
 	})

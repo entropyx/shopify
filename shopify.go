@@ -2,6 +2,7 @@ package shopify
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,7 +28,11 @@ func (e *Error) Error() string {
 }
 
 type Product struct {
-	Title string `json:"title,omitempty"`
+	Title       string `json:"title,omitempty"`
+	BodyHTML    string `json:"body_html,omitempty"`
+	Vendor      string `json:"vendor,omitempty"`
+	ProductType string `json:"product_type,omitempty"`
+	Tags        string `json:"tags,omitempty"`
 }
 
 type Store struct {
@@ -45,6 +50,14 @@ func (a *Auth) NewStore(name string) *Store {
 	return &Store{a, name}
 }
 
+func (a *Auth) authString() string {
+	join := fmt.Sprintf("%s:%s", a.Key, a.Secret)
+	fmt.Println("join", join)
+	hash := base64.StdEncoding.EncodeToString([]byte(join))
+	headerValue := fmt.Sprintf("Basic %s", hash)
+	return headerValue
+}
+
 func (s *Store) Create(in interface{}) error {
 	name := strings.ToLower(inflector.Pluralize(structName(in)))
 
@@ -56,8 +69,16 @@ func (s *Store) post(resource string, in interface{}) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("payload", string(payload))
 	buff := bytes.NewBuffer(payload)
-	resp, err := http.Post(fmt.Sprintf("%s/admin/%s.json", s.url(), resource), "application/json", buff)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/admin/%s.json", s.url(), resource), buff)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Authorization", s.auth.authString())
+	fmt.Println(s.auth.authString())
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -66,7 +87,8 @@ func (s *Store) post(resource string, in interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err = getError(body); err != nil {
+	fmt.Println("response body", string(body))
+	if err := getError(body); err != nil {
 		return err
 	}
 	err = json.Unmarshal(body, in)
